@@ -1,24 +1,19 @@
 import { useRef, useEffect, useState } from 'react'
 
-const GameCanvas = ({ onGameOver, onScore }) => {
+const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack }) => {
     const canvasRef = useRef(null)
-    const [gameOver, setGameOver] = useState(false)
+    const [isGameOver, setIsGameOver] = useState(false)
 
     // Game state refs
-    const sausageY = useRef(0)
-    const sausageVelocity = useRef(0)
-    const sausageRotation = useRef(0)
-    const isAntiGrav = useRef(false)
-    const isDashing = useRef(false)
-    const obstacles = useRef([])
+    const sausagePos = useRef({ x: 0, y: 0 })
+    const sausageRot = useRef(0)
+    const keys = useRef({})
+    const particles = useRef([])
     const frameCount = useRef(0)
-    const canvasSize = useRef({ width: 0, height: 0 })
+    const humanState = useRef('sleeping') // sleeping, tossing, awake
+    const humanReactionTimer = useRef(0)
 
-    const gravity = 0.4
-    const antiGravForce = -0.8
-    const dashForce = 15
-    const sausageWidth = 60
-    const sausageHeight = 25
+    const sausageSize = { w: 60, h: 25 }
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -27,190 +22,197 @@ const GameCanvas = ({ onGameOver, onScore }) => {
         const handleResize = () => {
             canvas.width = window.innerWidth
             canvas.height = window.innerHeight
-            canvasSize.current = { width: canvas.width, height: canvas.height }
-            sausageY.current = canvas.height / 2
+            sausagePos.current = { x: canvas.width / 4, y: canvas.height / 2 + 50 }
         }
 
         window.addEventListener('resize', handleResize)
         handleResize()
 
-        const handleInputDown = (e) => {
-            if (e.type === 'keydown' && e.code !== 'Space') return
-            isAntiGrav.current = true
-            isDashing.current = false
+        const handleKeyDown = (e) => {
+            const key = e.key.toLowerCase()
+            keys.current[key] = true
+            if (key === 'f') triggerAttack('fart')
+            if (key === 's') triggerAttack('snore')
+            if (key === 'c') triggerAttack('cold-feet')
         }
+        const handleKeyUp = (e) => keys.current[e.key.toLowerCase()] = false
+        window.addEventListener('keydown', handleKeyDown)
+        window.addEventListener('keyup', handleKeyUp)
 
-        const handleInputUp = (e) => {
-            if ((e.type === 'keyup' && e.code === 'Space') || e.type === 'touchend') {
-                if (isAntiGrav.current) {
-                    isAntiGrav.current = false
-                    isDashing.current = true // Sizzle Dash!
-                    sausageVelocity.current = dashForce
+        const triggerAttack = (type) => {
+            if (isGameOver) return
+            if (type === 'fart') {
+                for (let i = 0; i < 25; i++) {
+                    particles.current.push({
+                        x: sausagePos.current.x,
+                        y: sausagePos.current.y,
+                        vx: (Math.random() - 0.5) * 3,
+                        vy: (Math.random() - 0.5) * 3,
+                        size: Math.random() * 20 + 5,
+                        color: `rgba(46, 204, 113, ${Math.random() * 0.4 + 0.1})`,
+                        life: 80,
+                        growth: 0.1
+                    })
                 }
+                onDisturb(8)
+            } else if (type === 'snore') {
+                particles.current.push({
+                    x: sausagePos.current.x,
+                    y: sausagePos.current.y,
+                    type: 'text',
+                    text: 'HONK-SHOO!',
+                    size: 20, life: 100, vy: -1.2, vx: (Math.random() - 0.5) * 1
+                })
+                onDisturb(4)
+            } else if (type === 'cold-feet') {
+                for (let i = 0; i < 10; i++) {
+                    particles.current.push({
+                        x: sausagePos.current.x,
+                        y: sausagePos.current.y,
+                        color: '#3498db', size: 3, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, life: 30
+                    })
+                }
+                onDisturb(12)
             }
         }
 
-        window.addEventListener('keydown', handleInputDown)
-        window.addEventListener('keyup', handleInputUp)
-        window.addEventListener('touchstart', handleInputDown)
-        window.addEventListener('touchend', handleInputUp)
+        if (activeAttack) triggerAttack(activeAttack.type)
 
         let animationFrameId
-
         const render = () => {
-            if (gameOver) return
+            if (isGameOver) return
 
-            // Clear with kitchen-tile-like background pattern
-            context.fillStyle = '#1a1a1a'
+            // 1. Draw Environment (The Bed)
+            context.fillStyle = '#2c3e50' // Dark blue sheets
             context.fillRect(0, 0, canvas.width, canvas.height)
 
-            // Draw Grid/Tiles
-            context.strokeStyle = '#333'
+            // Draw Blanket pattern
+            context.strokeStyle = '#34495e'
             context.lineWidth = 1
-            for (let x = frameCount.current % 50; x < canvas.width; x += 50) {
+            for (let i = 0; i < canvas.width; i += 40) {
+                context.beginPath(); context.moveTo(i, 0); context.lineTo(i, canvas.height); context.stroke()
+            }
+
+            // 2. Draw Human (Abstractly)
+            const humanX = canvas.width * 0.7
+            const humanY = canvas.height * 0.5
+
+            context.save()
+            if (disturbance > 50) {
+                const shake = (disturbance - 50) / 10
+                context.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake)
+            }
+
+            // Draw Human (Cozy Mound)
+            context.fillStyle = '#1e272e'
+            context.beginPath()
+            context.ellipse(humanX, humanY, 120, 280, 0.1, 0, Math.PI * 2)
+            context.fill()
+
+            // Warning Glow for Kick
+            const kickCycle = frameCount.current % 300
+            if (kickCycle > 240) {
+                context.strokeStyle = `rgba(255, 0, 0, ${(kickCycle - 240) / 60})`
+                context.lineWidth = 10
                 context.beginPath()
-                context.moveTo(canvas.width - x, 0)
-                context.lineTo(canvas.width - x, canvas.height)
+                context.ellipse(humanX, humanY, 140, 300, 0.1, 0, Math.PI * 2)
                 context.stroke()
             }
-            for (let y = 0; y < canvas.height; y += 50) {
-                context.beginPath()
-                context.moveTo(0, y)
-                context.lineTo(canvas.width, y)
-                context.stroke()
-            }
+            context.restore()
 
-            // Physics Logic
-            if (isAntiGrav.current) {
-                sausageVelocity.current += antiGravForce
-                sausageRotation.current += 0.08 // Spinning lazily
-            } else {
-                sausageVelocity.current += gravity
-                // Pull back rotation towards velocity direction
-                const targetRot = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, sausageVelocity.current * 0.1))
-                sausageRotation.current += (targetRot - sausageRotation.current) * 0.1
-            }
-
-            sausageY.current += sausageVelocity.current
-
-            // Collision with floor/ceiling
-            if (sausageY.current > canvas.height - sausageHeight) {
-                sausageY.current = canvas.height - sausageHeight
-                sausageVelocity.current = 0
-                if (isDashing.current) {
-                    // Screen shake or effect could go here
+            // Toss and Turn Hazard (Kicked!)
+            if (kickCycle === 299) {
+                const distToHuman = Math.sqrt((sausagePos.current.x - humanX) ** 2 + (sausagePos.current.y - humanY) ** 2)
+                if (distToHuman < 220) {
+                    onGameOver()
+                    setIsGameOver(true)
                 }
-                isDashing.current = false
-            }
-            if (sausageY.current < 0) {
-                sausageY.current = 0
-                sausageVelocity.current = 0
             }
 
-            // Obstacles
-            frameCount.current++
-            if (frameCount.current % 120 === 0) {
-                const type = Math.random() > 0.7 ? 'syrup' : 'pipe'
-                const gap = 250
-                const gapPosition = Math.random() * (canvas.height - gap - 200) + 100
-                obstacles.current.push({
-                    x: canvas.width,
-                    gapTop: gapPosition,
-                    gapBottom: gapPosition + gap,
-                    width: 80,
-                    passed: false,
-                    type: type
-                })
+            // 3. Update & Draw Sausage
+            const moveSpeed = 4
+            if (keys.current['w'] || keys.current['arrowup']) sausagePos.current.y -= moveSpeed
+            if (keys.current['s'] || keys.current['arrowdown']) sausagePos.current.y += moveSpeed
+            if (keys.current['a'] || keys.current['arrowleft']) {
+                sausagePos.current.x -= moveSpeed
+                sausageRot.current -= 0.1
+            }
+            if (keys.current['d'] || keys.current['arrowright']) {
+                sausagePos.current.x += moveSpeed
+                sausageRot.current += 0.1
             }
 
-            obstacles.current.forEach((obs) => {
-                obs.x -= 5
+            // Keyboard Attack Triggers
+            if (keys.current['f']) { /* Fart already handled by prop or could be direct */ }
 
-                if (obs.type === 'syrup') {
-                    context.fillStyle = 'rgba(243, 156, 18, 0.6)'
-                    context.fillRect(obs.x, canvas.height - 40, obs.width, 40)
+            // Boundary
+            sausagePos.current.x = Math.max(50, Math.min(canvas.width - 50, sausagePos.current.x))
+            sausagePos.current.y = Math.max(50, Math.min(canvas.height - 50, sausagePos.current.y))
+
+            // Collision with Feet area (Disturbance over time)
+            const distToFeet = Math.sqrt((sausagePos.current.x - humanX) ** 2 + (sausagePos.current.y - (humanY + 200)) ** 2)
+            if (distToFeet < 100) {
+                onDisturb(0.15)
+                if (frameCount.current % 10 === 0) {
+                    particles.current.push({
+                        x: sausagePos.current.x, y: sausagePos.current.y, color: '#3498db', size: 2, life: 20,
+                        vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4
+                    })
+                }
+            }
+
+            // 4. Draw Sausage
+            context.save()
+            context.translate(sausagePos.current.x, sausagePos.current.y)
+            context.rotate(sausageRot.current)
+            context.fillStyle = '#e74c3c'
+            context.beginPath()
+            context.roundRect(-sausageSize.w / 2, -sausageSize.h / 2, sausageSize.w, sausageSize.h, 10)
+            context.fill()
+
+            // Eyes
+            context.fillStyle = 'white'
+            context.beginPath(); context.arc(20, -5, 4, 0, Math.PI * 2); context.fill()
+            context.fillStyle = 'black'
+            context.beginPath(); context.arc(22, -5, 2, 0, Math.PI * 2); context.fill()
+            context.restore()
+
+            // 5. Particles Update
+            particles.current.forEach((p, i) => {
+                p.life--
+                if (p.type === 'text') {
+                    p.y += p.vy
+                    context.fillStyle = 'white'
+                    context.font = `${p.size}px Arial`
+                    context.fillText(p.text, p.x, p.y)
                 } else {
-                    // "Kitchen Utensil" or pipe
-                    context.fillStyle = '#95a5a6'
-                    context.fillRect(obs.x, 0, obs.width, obs.gapTop)
-                    context.fillRect(obs.x, obs.gapBottom, obs.width, canvas.height - obs.gapBottom)
-                }
-
-                // Collision
-                const sausageX = 150
-                if (
-                    sausageX + sausageWidth > obs.x &&
-                    sausageX < obs.x + obs.width
-                ) {
-                    if (obs.type === 'pipe') {
-                        if (sausageY.current < obs.gapTop || sausageY.current + sausageHeight > obs.gapBottom) {
-                            setGameOver(true)
-                            onGameOver()
-                        }
-                    } else if (obs.type === 'syrup' && sausageY.current > canvas.height - 80) {
-                        obs.x += 1 // Slow down effect
-                    }
-                }
-
-                if (!obs.passed && obs.x < sausageX) {
-                    obs.passed = true
-                    onScore()
+                    p.x += p.vx || 0
+                    p.y += p.vy || 0
+                    context.fillStyle = p.color
+                    context.beginPath()
+                    context.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+                    context.fill()
                 }
             })
+            particles.current = particles.current.filter(p => p.life > 0)
 
-            obstacles.current = obstacles.current.filter(obs => obs.x + obs.width > 0)
+            // 6. Win/Loss Logic
+            if (disturbance >= 100) {
+                onWin()
+                setIsGameOver(true)
+            }
 
-            // Draw Sausage
-            context.save()
-            context.translate(150 + sausageWidth / 2, sausageY.current + sausageHeight / 2)
-            context.rotate(sausageRotation.current)
-
-            // Sausage segments (sentient link)
-            const segments = 3
-            const segmentWidth = sausageWidth / segments
-            for (let i = 0; i < segments; i++) {
-                context.fillStyle = isDashing.current ? '#f1c40f' : '#e74c3c'
-                context.beginPath()
-                context.roundRect(
-                    -sausageWidth / 2 + i * segmentWidth + 2,
-                    -sausageHeight / 2,
-                    segmentWidth - 4,
-                    sausageHeight,
-                    10
-                )
-                context.fill()
-
-                // Link string
-                if (i < segments - 1) {
-                    context.strokeStyle = '#c0392b'
-                    context.lineWidth = 4
-                    context.beginPath()
-                    context.moveTo(-sausageWidth / 2 + (i + 1) * segmentWidth - 2, 0)
-                    context.lineTo(-sausageWidth / 2 + (i + 1) * segmentWidth + 2, 0)
-                    context.stroke()
+            // Random "Toss and Turn" hazard
+            frameCount.current++
+            if (frameCount.current % 300 === 0 && Math.random() > 0.5) {
+                // Human moves! If sausage is close, it gets kicked
+                context.shadowBlur = 50
+                context.shadowColor = 'red'
+                if (Math.abs(sausagePos.current.x - humanX) < 200) {
+                    onGameOver()
+                    setIsGameOver(true)
                 }
             }
-
-            // Eyes (sentient!)
-            context.fillStyle = 'white'
-            context.beginPath()
-            context.arc(sausageWidth / 2 - 10, -5, 4, 0, Math.PI * 2)
-            context.fill()
-            context.fillStyle = 'black'
-            context.beginPath()
-            context.arc(sausageWidth / 2 - 8, -5, 2, 0, Math.PI * 2)
-            context.fill()
-
-            // Glow if Anti-Grav or Dashing
-            if (isAntiGrav.current) {
-                context.shadowBlur = 15
-                context.shadowColor = '#3498db'
-            } else if (isDashing.current) {
-                context.shadowBlur = 20
-                context.shadowColor = '#f1c40f'
-            }
-
-            context.restore()
 
             animationFrameId = window.requestAnimationFrame(render)
         }
@@ -219,20 +221,13 @@ const GameCanvas = ({ onGameOver, onScore }) => {
 
         return () => {
             window.removeEventListener('resize', handleResize)
-            window.removeEventListener('keydown', handleInputDown)
-            window.removeEventListener('keyup', handleInputUp)
-            window.removeEventListener('touchstart', handleInputDown)
-            window.removeEventListener('touchend', handleInputUp)
+            window.removeEventListener('keydown', handleKeyDown)
+            window.removeEventListener('keyup', handleKeyUp)
             window.cancelAnimationFrame(animationFrameId)
         }
-    }, [gameOver, onGameOver, onScore])
+    }, [isGameOver, onGameOver, onWin, onDisturb, activeAttack, disturbance])
 
-    return (
-        <canvas
-            ref={canvasRef}
-            style={{ display: 'block', width: '100vw', height: '100vh' }}
-        />
-    )
+    return <canvas ref={canvasRef} style={{ display: 'block', width: '100vw', height: '100vh' }} />
 }
 
 export default GameCanvas
