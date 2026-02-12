@@ -1,4 +1,8 @@
 import { useRef, useEffect, useState } from 'react'
+import bedroomImg from '../assets/bedroom.png'
+import sausageImg from '../assets/sausage.png'
+import humanSleepingImg from '../assets/human_sleeping.png'
+import humanDisturbedImg from '../assets/human_disturbed.png'
 
 const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack }) => {
     const canvasRef = useRef(null)
@@ -16,6 +20,20 @@ const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack })
     const sausageSize = { w: 60, h: 25 }
 
     useEffect(() => {
+        let loadedCount = 0
+        const totalImages = 4
+        const handleLoad = () => {
+            loadedCount++
+            if (loadedCount === totalImages) setImagesLoaded(true)
+        }
+
+        assets.current.bg.src = bedroomImg
+        assets.current.sausage.src = sausageImg
+        assets.current.sleeping.src = humanSleepingImg
+        assets.current.disturbed.src = humanDisturbedImg
+
+        Object.values(assets.current).forEach(img => img.onload = handleLoad)
+
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
 
@@ -40,18 +58,18 @@ const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack })
         window.addEventListener('keyup', handleKeyUp)
 
         const triggerAttack = (type) => {
-            if (isGameOver) return
+            if (isGameOver || !imagesLoaded) return
             if (type === 'fart') {
-                for (let i = 0; i < 25; i++) {
+                for (let i = 0; i < 30; i++) {
                     particles.current.push({
                         x: sausagePos.current.x,
                         y: sausagePos.current.y,
-                        vx: (Math.random() - 0.5) * 3,
-                        vy: (Math.random() - 0.5) * 3,
-                        size: Math.random() * 20 + 5,
-                        color: `rgba(46, 204, 113, ${Math.random() * 0.4 + 0.1})`,
-                        life: 80,
-                        growth: 0.1
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        size: Math.random() * 30 + 10,
+                        color: `rgba(168, 213, 186, ${Math.random() * 0.4 + 0.12})`, // Soft watercolor green
+                        life: 120,
+                        growth: 0.15
                     })
                 }
                 onDisturb(8)
@@ -61,15 +79,16 @@ const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack })
                     y: sausagePos.current.y,
                     type: 'text',
                     text: 'HONK-SHOO!',
-                    size: 20, life: 100, vy: -1.2, vx: (Math.random() - 0.5) * 1
+                    size: 26, life: 140, vy: -1.4, vx: (Math.random() - 0.5) * 1.5
                 })
                 onDisturb(4)
             } else if (type === 'cold-feet') {
-                for (let i = 0; i < 10; i++) {
+                for (let i = 0; i < 15; i++) {
                     particles.current.push({
                         x: sausagePos.current.x,
                         y: sausagePos.current.y,
-                        color: '#3498db', size: 3, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, life: 30
+                        color: 'rgba(135, 206, 235, 0.6)',
+                        size: 4, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, life: 40
                     })
                 }
                 onDisturb(12)
@@ -80,42 +99,46 @@ const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack })
 
         let animationFrameId
         const render = () => {
-            if (isGameOver) return
-
-            // 1. Draw Environment (The Bed)
-            context.fillStyle = '#2c3e50' // Dark blue sheets
-            context.fillRect(0, 0, canvas.width, canvas.height)
-
-            // Draw Blanket pattern
-            context.strokeStyle = '#34495e'
-            context.lineWidth = 1
-            for (let i = 0; i < canvas.width; i += 40) {
-                context.beginPath(); context.moveTo(i, 0); context.lineTo(i, canvas.height); context.stroke()
+            if (isGameOver || !imagesLoaded) {
+                animationFrameId = window.requestAnimationFrame(render)
+                return
             }
 
-            // 2. Draw Human (Abstractly)
+            // 1. Draw Background (Studio Ghibli Bedroom)
+            const bg = assets.current.bg
+            const scale = Math.max(canvas.width / bg.width, canvas.height / bg.height)
+            const x = (canvas.width / 2) - (bg.width / 2) * scale
+            const y = (canvas.height / 2) - (bg.height / 2) * scale
+            context.drawImage(bg, x, y, bg.width * scale, bg.height * scale)
+
+            // 2. Human Partner
             const humanX = canvas.width * 0.7
             const humanY = canvas.height * 0.5
+            const humanImg = disturbance > 80 ? assets.current.disturbed : assets.current.sleeping
+            const humanScale = 0.8
 
             context.save()
             if (disturbance > 50) {
-                const shake = (disturbance - 50) / 10
+                const shake = (disturbance - 50) / 8
                 context.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake)
             }
 
-            // Draw Human (Cozy Mound)
-            context.fillStyle = '#1e272e'
-            context.beginPath()
-            context.ellipse(humanX, humanY, 120, 280, 0.1, 0, Math.PI * 2)
-            context.fill()
+            context.drawImage(
+                humanImg,
+                humanX - (humanImg.width * humanScale / 2),
+                humanY - (humanImg.height * humanScale / 2),
+                humanImg.width * humanScale,
+                humanImg.height * humanScale
+            )
 
             // Warning Glow for Kick
             const kickCycle = frameCount.current % 300
             if (kickCycle > 240) {
-                context.strokeStyle = `rgba(255, 0, 0, ${(kickCycle - 240) / 60})`
-                context.lineWidth = 10
+                context.strokeStyle = `rgba(255, 100, 100, ${(kickCycle - 240) / 60})`
+                context.lineWidth = 15
+                context.setLineDash([20, 10])
                 context.beginPath()
-                context.ellipse(humanX, humanY, 140, 300, 0.1, 0, Math.PI * 2)
+                context.ellipse(humanX, humanY, 200, 200, 0, 0, Math.PI * 2)
                 context.stroke()
             }
             context.restore()
@@ -123,14 +146,14 @@ const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack })
             // Toss and Turn Hazard (Kicked!)
             if (kickCycle === 299) {
                 const distToHuman = Math.sqrt((sausagePos.current.x - humanX) ** 2 + (sausagePos.current.y - humanY) ** 2)
-                if (distToHuman < 220) {
+                if (distToHuman < 250) {
                     onGameOver()
                     setIsGameOver(true)
                 }
             }
 
             // 3. Update & Draw Sausage
-            const moveSpeed = 4
+            const moveSpeed = 6
             if (keys.current['w'] || keys.current['arrowup']) sausagePos.current.y -= moveSpeed
             if (keys.current['s'] || keys.current['arrowdown']) sausagePos.current.y += moveSpeed
             if (keys.current['a'] || keys.current['arrowleft']) {
@@ -161,33 +184,32 @@ const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack })
                 }
             }
 
-            // 4. Draw Sausage
+            // 4. Draw Sausage Sprite
+            const sImg = assets.current.sausage
+            const sScale = 0.3
             context.save()
             context.translate(sausagePos.current.x, sausagePos.current.y)
             context.rotate(sausageRot.current)
-            context.fillStyle = '#e74c3c'
-            context.beginPath()
-            context.roundRect(-sausageSize.w / 2, -sausageSize.h / 2, sausageSize.w, sausageSize.h, 10)
-            context.fill()
-
-            // Eyes
-            context.fillStyle = 'white'
-            context.beginPath(); context.arc(20, -5, 4, 0, Math.PI * 2); context.fill()
-            context.fillStyle = 'black'
-            context.beginPath(); context.arc(22, -5, 2, 0, Math.PI * 2); context.fill()
+            context.drawImage(
+                sImg,
+                -(sImg.width * sScale / 2),
+                -(sImg.height * sScale / 2),
+                sImg.width * sScale,
+                sImg.height * sScale
+            )
             context.restore()
 
             // 5. Particles Update
-            particles.current.forEach((p, i) => {
+            particles.current.forEach((p) => {
                 p.life--
+                p.x += p.vx || 0
+                p.y += p.vy || 0
+                if (p.growth) p.size += p.growth
                 if (p.type === 'text') {
-                    p.y += p.vy
-                    context.fillStyle = 'white'
-                    context.font = `${p.size}px Arial`
+                    context.fillStyle = `rgba(255, 255, 255, ${p.life / 140})`
+                    context.font = `bold ${p.size}px "Indie Flower", cursive`
                     context.fillText(p.text, p.x, p.y)
                 } else {
-                    p.x += p.vx || 0
-                    p.y += p.vy || 0
                     context.fillStyle = p.color
                     context.beginPath()
                     context.arc(p.x, p.y, p.size, 0, Math.PI * 2)
@@ -202,18 +224,7 @@ const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack })
                 setIsGameOver(true)
             }
 
-            // Random "Toss and Turn" hazard
             frameCount.current++
-            if (frameCount.current % 300 === 0 && Math.random() > 0.5) {
-                // Human moves! If sausage is close, it gets kicked
-                context.shadowBlur = 50
-                context.shadowColor = 'red'
-                if (Math.abs(sausagePos.current.x - humanX) < 200) {
-                    onGameOver()
-                    setIsGameOver(true)
-                }
-            }
-
             animationFrameId = window.requestAnimationFrame(render)
         }
 
@@ -225,9 +236,22 @@ const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack })
             window.removeEventListener('keyup', handleKeyUp)
             window.cancelAnimationFrame(animationFrameId)
         }
-    }, [isGameOver, onGameOver, onWin, onDisturb, activeAttack, disturbance])
+    }, [isGameOver, onGameOver, onWin, onDisturb, activeAttack, disturbance, imagesLoaded])
 
-    return <canvas ref={canvasRef} style={{ display: 'block', width: '100vw', height: '100vh' }} />
+    return (
+        <>
+            {!imagesLoaded && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                    background: '#fdf6e3', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 100, fontFamily: '"Indie Flower", cursive', fontSize: '2rem', color: '#657b83'
+                }}>
+                    Entering the dream... 🌸
+                </div>
+            )}
+            <canvas ref={canvasRef} style={{ display: 'block', width: '100vw', height: '100vh', cursor: 'pointer' }} />
+        </>
+    )
 }
 
 export default GameCanvas

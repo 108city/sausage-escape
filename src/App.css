@@ -28,7 +28,8 @@ body {
 }
 
 .app-container.bed-theme {
-    background: radial-gradient(circle, #2c3e50, #1a1a1a);
+    background: #fdf6e3;
+    /* Soft cream/paper background */
 }
 
 .vignette {
@@ -37,41 +38,60 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+    background: radial-gradient(circle, transparent 70%, rgba(101, 123, 131, 0.1) 100%);
     pointer-events: none;
     z-index: 5;
 }
 
 .bedroom-overlay {
-    background: rgba(44, 62, 80, 0.85);
-    border-color: #3498db;
-    color: #ecf0f1;
+    background: rgba(253, 246, 227, 0.9);
+    border: 3px solid #eee8d5;
+    color: #657b83;
+    border-radius: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(5px);
 }
 
 .bed-title {
-    background: linear-gradient(to bottom, #ecf0f1, #bdc3c7);
+    background: linear-gradient(to bottom, #d33682, #b58900);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
+    font-family: 'Indie Flower', cursive;
+    letter-spacing: 2px;
 }
 
 .pink-text {
-    color: #ff79c6;
+    color: #d33682;
 }
 
 .white-text {
-    color: white;
+    color: #586e75;
 }
 
 .cozy-btn {
-    background: #6272a4;
-    box-shadow: 0 5px 0 #44475a;
+    background: #2aa198;
+    color: white;
+    border: none;
+    padding: 1rem 3rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 5px 0 #073642;
+    border-radius: 15px;
+    font-family: 'Indie Flower', cursive;
 }
 
 .cozy-btn:hover {
-    background: #ff79c6;
-    box-shadow: 0 7px 0 #bd93f9;
+    background: #b58900;
+    transform: translateY(-2px);
+    box-shadow: 0 7px 0 #657b83;
+}
+
+.cozy-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px 0 #657b83;
 }
 
 .ui-container {
@@ -79,7 +99,7 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    padding: 1.5rem;
+    padding: 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -90,52 +110,56 @@ body {
 .disturbance-bar-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    color: #ff5555;
+    gap: 0.8rem;
+    color: #cb4b16;
+    font-family: 'Indie Flower', cursive;
     font-weight: bold;
-    font-size: 0.8rem;
+    font-size: 1.2rem;
     pointer-events: auto;
 }
 
 .disturbance-bar {
-    width: 200px;
-    height: 20px;
-    background: #44475a;
-    border-radius: 10px;
+    width: 250px;
+    height: 15px;
+    background: #eee8d5;
+    border-radius: 20px;
     overflow: hidden;
-    border: 2px solid #6272a4;
+    border: 2px solid #93a1a1;
 }
 
 .disturbance-fill {
     height: 100%;
-    background: linear-gradient(to right, #f1c40f, #ff5555);
-    transition: width 0.3s ease;
+    background: linear-gradient(to right, #b58900, #dc322f);
+    transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .attack-buttons {
     display: flex;
-    gap: 1rem;
+    gap: 1.5rem;
     pointer-events: auto;
 }
 
 .attack-btn {
-    padding: 0.8rem 1.2rem;
-    background: #6272a4;
-    border: none;
-    border-radius: 8px;
-    color: white;
+    padding: 1rem 1.5rem;
+    background: #eee8d5;
+    border: 2px solid #93a1a1;
+    border-radius: 12px;
+    color: #586e75;
+    font-family: 'Indie Flower', cursive;
     font-weight: bold;
+    font-size: 1rem;
     cursor: pointer;
-    transition: transform 0.1s, background 0.2s;
-    box-shadow: 0 4px 0 #44475a;
+    transition: all 0.2s;
+    box-shadow: 0 4px 0 #93a1a1;
 }
 
 .attack-btn:hover {
-    background: #50fa7b;
-    color: #282a36;
+    background: #2aa198;
+    color: white;
+    border-color: #073642;
 }
 
 .attack-btn:active {
     transform: translateY(2px);
-    box-shadow: 0 2px 0 #44475a;
+    box-shadow: 0 2px 0 #93a1a1;
 }
