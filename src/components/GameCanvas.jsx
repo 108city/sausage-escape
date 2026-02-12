@@ -7,6 +7,15 @@ import humanDisturbedImg from '../assets/human_disturbed.png'
 const GameCanvas = ({ disturbance, onDisturb, onGameOver, onWin, activeAttack }) => {
     const canvasRef = useRef(null)
     const [isGameOver, setIsGameOver] = useState(false)
+    const [imagesLoaded, setImagesLoaded] = useState(false)
+
+    // Asset refs
+    const assets = useRef({
+        bg: new Image(),
+        sausage: new Image(),
+        sleeping: new Image(),
+        disturbed: new Image()
+    })
 
     // Game state refs
     const sausagePos = useRef({ x: 0, y: 0 })
